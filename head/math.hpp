@@ -1,27 +1,15 @@
 #pragma once
 
+#ifdef _THIS_FILE_IS_DEPRECATED__MATH_HPP_
+
 #include <cmath>
+#include <algorithm>
 
 //? I'M TEMPLATING SO HARD RIGHT NOW!!!
 /// also try to keep this file COMPLETELY INDEPENDENT
 /// of other files, I want this file to be good enough
 /// to where I can copy JUST THIS ONE FILE into ANY 
 /// other project without ANY issues.
-/// 
-/// I've thought of a good idea for handling vectors and
-/// matrices, but it'll require re-writing all of this,
-/// which I kinda want to do anyways, but it already 
-/// took a half-day to write this, so if I do it again,
-/// I'll take even longer considering what I want the
-/// class to be, but I believe it would be worth it...
-
-//todo: implement a matrix class that create a matrix of
-//todo: any size and can perform operations on them, it
-//todo: seems like it'll be difficult, but it should be
-//todo: possible...
-//todo: also I figured out how to have overloaded ops
-//todo: without having to include <iostream>, get it dun
-
 
 ///~~~~~~~~~~~~~~~~ Constants/Macros ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Useful math constants to save on typing, and to improve readability.
@@ -52,16 +40,6 @@ using ldouble = long double;
 #define PI  3.141'592'653'589'793'238
 #define E   2.718'281'828'459'045'235
 
-// this is weird, but it also seems useful.
-template <typename UserType>
-static constexpr UserType IDENTITY_MATRIX4[4][4] =
-{
-	{1,0,0,0},
-	{0,1,0,0},
-	{0,0,1,0},
-	{0,0,0,1}
-};
-
 
 ///|===== Macros/Functions ===============================|
 
@@ -69,18 +47,23 @@ static constexpr UserType IDENTITY_MATRIX4[4][4] =
 // While you "can" use integer types, it isn't recommended as this
 // function will return '0' most of the time when integers are used.
 template <typename UserType = float>
-constexpr UserType degrees_to_rads(const UserType& degrees)
+constexpr UserType Degs_to_Rads(const UserType& degrees)
 {
 	return degrees * static_cast<UserType>(PI / 180);
 }
-
+template <typename UserType = float>
+constexpr UserType Rads_to_Degs(const UserType& radians)
+{
+	return radians * static_cast<UserType>(180 / PI);
+}
 
 ///~~~~~~~~~~~~~~~~ Classes/Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Math classes that are designed primarily for operating on numbers and systems used heavily in
 // Computer Graphics.
 
+
 ///------------------------------------------------------------------------------------------------
-/// | math.hpp | Vector3 |
+/// math.hpp | Vector3 | No Inheritance
 ///------------------------------------------------------------------------------------------------
 // 3-Dimension Vector class.
 // Supports common operations on 3-dimensional vectors through member functions manipulating the 
@@ -139,8 +122,56 @@ struct Vector3
 			y *= inverse_len;
 			z *= inverse_len;
 		}
-
 		return *this;
+	}
+
+//TODO: didn't work, delete
+	Vector3<UserType> unchanging_normalize()
+	{
+		static Vector3<UserType> points;
+		UserType len = x * x + y * y + z * z;
+		if (len > 0) {
+			UserType inverse_len = 1 / std::sqrt(len);
+			points.x *= inverse_len;
+			points.y *= inverse_len;
+			points.z *= inverse_len;
+		}
+		return points;
+	}
+
+	UserType theta(const UserType& z_coordinate)
+	{
+		return std::acos(std::clamp<UserType>(z_coordinate, -1, 1));
+	}
+
+	UserType phi(const UserType& x_coordinate, const UserType& y_coordinate)
+	{
+		UserType p = UserType(std::atan2(y_coordinate, x_coordinate));
+		return UserType((p < 0) ? p + 2 * PI : p);
+	}
+
+// This function seems a little weird, but I think if I made it change the coordinates of the points
+// in this class, that might be useful, I'll have to get to actually using this class in 3d
+// rendering to find out if it will be useful though.
+
+	// This function expects theta and phi in DEGREES, NOT RADIANS, they'll be automatically converted
+	// IF you don't want that, enter third parameter as TRUE.
+	Vector3<UserType> spherical_to_cartesian(const UserType& theta, const UserType& phi, bool no_convert = false)
+	{
+		if (no_convert) {
+			return Vector3<UserType>(
+				std::cos(phi) * std::sin(theta),
+				std::sin(phi) * std::sin(theta),
+				std::cos(theta)
+			);
+		}
+		else {
+			return Vector3<UserType>(
+				std::cos(Degs_to_Rads(phi)) * std::sin(Degs_to_Rads(theta)),
+				std::sin(Degs_to_Rads(phi)) * std::sin(Degs_to_Rads(theta)),
+				std::cos(Degs_to_Rads(theta))
+			);
+		}
 	}
 
 
@@ -158,11 +189,9 @@ struct Vector3
 		if (this == &vec3) {
 			return *this;
 		}
-
 		x = vec3.x;
 		y = vec3.y;
 		z = vec3.z;
-
 		return *this;
 	}
 	Vector3<UserType> operator+(const Vector3<UserType>& vec3) const
@@ -179,15 +208,13 @@ struct Vector3
 	}
 };// END OF: Vector3
 
-
-
 ///~~~~~~~~~~~~~~~~ Overloaded Operators for class Vector3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #ifdef _IOSTREAM_
 template <typename OverloadType>
 std::ostream& operator<<(std::ostream& cout, const Vector3<OverloadType>& vec3)
 {
-	cout << "[" << vec3.x << " " << vec3.y << " " << vec3.z << "]";
+	cout << "[" << vec3.x << ", " << vec3.y << ", " << vec3.z << "]";
 	return cout;
 }
 template <typename OverloadType>
@@ -240,9 +267,79 @@ void Vector3_Normalize(Vector3<UserType>& vec3)
 	}
 }
 
+template <typename UserType>
+inline UserType Spherical_Theta(const Vector3<UserType>& vec3)
+{
+	if (vec3.length() != 1) {
+		vec3.normalize();
+	}
+	return std::acos(vec3.z);
+}
+
+template <typename UserType>
+inline UserType Spherical_Phi(const Vector3<UserType>& vec3)
+{
+	UserType phi = std::atan2(vec3.y, vec3.x);
+	return (phi < 0) ? phi + 2 * PI : phi;
+}
+
 
 ///------------------------------------------------------------------------------------------------
-/// | math.hpp | SquareMatrix |
+/// math.hpp | Vector4 | Inheritance: Vector3->Vector4
+///------------------------------------------------------------------------------------------------
+// 4-Dimension Vector class.
+// Supports common operations on 4-dimensional vectors through member functions manipulating the 
+// variables: x, y, z, and w.
+// This class only exists to allow multiplication of 4x4 matrices for projective tranforms, and I'm
+// not even sure it'll work the way I expect. But I'll implement it anyways and figure out later.
+template<class UserType>
+struct Vector4 : public Vector3<UserType>
+{
+	UserType w;
+
+	Vector4() :
+		w(UserType(0))
+	{}
+};
+
+///~~~~~~~~~~~~~~~~ Utility Functions for class Vector3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+template <typename UserType>
+UserType Vector4_Length(const Vector4<UserType>& vec4)
+{
+	return std::sqrt(vec4.x * vec4.x + vec4.y * vec4.y + vec4.z * vec4.z);
+}
+
+template <typename UserType>
+UserType Vector4_DotProduct(const Vector4<UserType>& vec4A, const Vector4<UserType>& vec4B)
+{
+	return vec4A.x * vec4B.x + vec4A.y * vec4B.y + vec4A.z * vec4B.z;
+}
+
+template <typename UserType>
+Vector3<UserType> Vector4_CrossProduct(const Vector4<UserType>& vec4A, const Vector4<UserType>& vec4B)
+{
+	return Vector3<UserType>(
+		vec4A.y * vec4B.z - vec4A.z * vec4B.y,
+		vec4A.z * vec4B.x - vec4A.x * vec4B.z,
+		vec4A.x * vec4B.y - vec4A.y * vec4B.x
+	);
+}
+
+template <typename UserType>
+void Vector4_Normalize(Vector3<UserType>& vec4)
+{
+	UserType len = vec4.x * vec4.x + vec4.y * vec4.y + vec4.z * vec4.z;
+	if (len > 0) {
+		UserType inverse_len = 1 / std::sqrt(len);
+		vec4.x *= inverse_len;
+		vec4.y *= inverse_len;
+		vec4.z *= inverse_len;
+	}
+}
+
+///------------------------------------------------------------------------------------------------
+/// | math.hpp | SquareMatrix | No Inheritance
 ///------------------------------------------------------------------------------------------------
 // Square Matrix class (N x N dimensions).
 // Supports common operations on square matrices through member functions. 
@@ -257,15 +354,13 @@ struct SquareMatrix
 
 ///|===== Constructor(s) | Destructor(s) =======|
 
-	SquareMatrix()
+	SquareMatrix() :
+		user_matrix{ { UserType(0) } }
 	{
-		for (size_t i = 0; i < dimensions; i++) {
-			for (size_t j = 0; j < dimensions; j++) {
-				user_matrix[i][j] = 0;
-			}
-		}
+		
 	}
-	SquareMatrix(UserType value)
+	SquareMatrix(UserType value) :
+		user_matrix{ { UserType(0) } }
 	{
 		for (size_t i = 0; i < dimensions; i++) {
 			user_matrix[i][i] = value;
@@ -291,29 +386,48 @@ struct SquareMatrix
 		return *this;
 	}
 
-	// Muliplies diagonal cells of the matrix by the scalar
-	SquareMatrix<UserType, dimensions>& scale(const UserType& scalar)
-	{
-		for (size_t i = 0; i < dimensions; i++) {
-			user_matrix[i][i] *= scalar;
-		}
-
-		return *this;
-	}
-
 	size_t size()
 	{
 		return dimensions;
+	}
+
+	Vector3<UserType> transform_w_matrix(const Vector3<UserType>& vector)
+	{
+#ifdef ROWMAJOR
+		return Vector3<UserType>(
+			vector.x * user_matrix[0][0] + vector.y * user_matrix[1][0] + vector.z * user_matrix[2][0],
+			vector.x * user_matrix[0][1] + vector.y * user_matrix[1][1] + vector.z * user_matrix[2][1],
+			vector.x * user_matrix[0][2] + vector.y * user_matrix[1][2] + vector.z * user_matrix[2][2]
+		);
+#else 
+		return Vector3<UserType>(
+			vector.x * user_matrix[0][0] + vector.y * user_matrix[0][1] + vector.z * user_matrix[0][2],
+			vector.x * user_matrix[1][0] + vector.y * user_matrix[1][1] + vector.z * user_matrix[1][2],
+			vector.x * user_matrix[2][0] + vector.y * user_matrix[2][1] + vector.z * user_matrix[2][2]
+		);
+#endif 
+	}
+
+	SquareMatrix<UserType, dimensions> transpose() const
+	{
+		SquareMatrix<UserType, dimensions> transposed_matrix;
+		for (size_t i = 0; i < dimensions; i++) {
+			for (size_t j = 0; j < dimensions; j++) {
+				transposed_matrix[i][j] = user_matrix[j][i];
+			}
+		}
+		return transposed_matrix;
 	}
 
 #ifdef _IOSTREAM_
 	void print_to_console()
 	{
 		for (int i = 0; i < dimensions; i++) {
+			std::cout << "[";
 			for (int j = 0; j < dimensions; j++) {
-				std::cout << user_matrix[i][j] << " ";
+				std::cout << user_matrix[i][j] << ", ";
 			}
-			std::cout << '\n';
+			std::cout << "]\n";
 		}
 	}
 #else
@@ -351,42 +465,15 @@ struct SquareMatrix
 ///~~~~~~~~~~~~~~~~ Utility Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 template <typename UserType>
-void cw_x_rotate4(SquareMatrix<UserType, 4>& mat4, UserType degrees)
+UserType Spherical_Theta(const UserType& z_coordinate)
 {
-	SquareMatrix<UserType, 4> x_rotate_mat;
-
-	degrees *= degrees_to_rads(degrees);
-
-// holy fuck my eyes!?
-//TODO: FIX THIS PLEASE CAUSE IT SUCKS ASSHOLES...
-//note: some more research into class designing for c++ should get this looking good ;)
-	x_rotate_mat[0][0] = 1;
-	x_rotate_mat[0][1] = 0;
-	x_rotate_mat[0][2] = 0;
-	x_rotate_mat[0][3] = 0;
-	
-	x_rotate_mat[1][0] = 0;
-	x_rotate_mat[1][1] = static_cast<UserType>(std::cos(degrees));
-	x_rotate_mat[1][2] = static_cast<UserType>(std::sin(degrees));
-	x_rotate_mat[1][3] = 0;
-	
-	x_rotate_mat[2][0] = 0;
-	x_rotate_mat[2][1] = static_cast<UserType>(-std::sin(degrees));
-	x_rotate_mat[2][2] = static_cast<UserType>(std::cos(degrees));
-	x_rotate_mat[2][3] = 0;
-	
-	x_rotate_mat[3][0] = 0;
-	x_rotate_mat[3][1] = 0;
-	x_rotate_mat[3][2] = 0;
-	x_rotate_mat[3][3] = 1;
-
-
-	//{
-	//	{1,  0,                                          0,                                         0},
-	//	{0,  static_cast<UserType>(std::cos(degrees)),   static_cast<UserType>(std::sin(degrees)),  0},
-	//	{0,  static_cast<UserType>(-std::sin(degrees)),  static_cast<UserType>(std::cos(degrees)),  0},
-	//	{0,  0,                                          0,                                         1}
-	//};
-
-	mat4 = mat4 * x_rotate_mat;
+	return std::acos(std::clamp<UserType>(z_coordinate, -1, 1));
 }
+template <typename UserType>
+UserType Spherical_Phi(const UserType& x_coordinate, const UserType& y_coordinate)
+{
+	UserType p = UserType(std::atan2(y_coordinate, x_coordinate));
+	return UserType((p < 0) ? p + 2 * PI : p);
+}
+
+#endif//DONTUSETHIS
