@@ -1,13 +1,5 @@
 ///~~~~~~~~~~~~~~~~ Standard Typedefs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// This section is mainly used to save time in typing by using the "using" keyword to shorten the 
-// signature of some common types.
-// This file isn't necessary as it only contains using directives. BUT if you do decide to use the
-// file, then including "math.hpp" won't be necessary.
-// Files that are included when this file is included are:
-// - math.hpp
-// - cmath
-// 
-// If a specific type is needed, then the standard signature will have to be used.
+// files to save on typing. Is included with "d_math.hpp".
 #pragma once
 #ifndef DENDS_MATH__TYPEDEFS_HPP
 #define DENDS_MATH__TYPEDEFS_HPP
