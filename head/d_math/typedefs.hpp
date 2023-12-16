@@ -12,6 +12,8 @@
 #ifndef DENDS_MATH__TYPEDEFS_HPP
 #define DENDS_MATH__TYPEDEFS_HPP
 
+#include "d_math.hpp"
+
 ///|===== Vector3 ==============================|
 
 using Vec3f = Vector3<float>;
